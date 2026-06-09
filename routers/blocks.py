@@ -1,7 +1,7 @@
 """
 Blocks HTTP endpoints — Controller layer.
 
-Knows HTTP (status codes, paths) but delegates all DB work to crud/blocks.py.
+Knows HTTP (status codes, paths) but delegates all DB work to crud/block.py.
 """
 
 from typing import List
@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from schemas.blocks import BlockCreate, BlockUpdate, BlockOut
+from schemas.block import BlockCreate, BlockUpdate, BlockOut
 from crud import blocks as crud_blocks
 
 router = APIRouter(prefix="/api/blocks", tags=["blocks"])

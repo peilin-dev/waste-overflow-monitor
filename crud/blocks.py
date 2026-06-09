@@ -8,8 +8,8 @@ from typing import Optional, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.blocks import Block
-from schemas.blocks import BlockCreate, BlockUpdate
+from models.block import Block
+from schemas.block import BlockCreate, BlockUpdate
 
 
 async def get_all(db: AsyncSession) -> Sequence[Block]:
