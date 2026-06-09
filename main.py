@@ -11,10 +11,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 
 # Import models so SQLAlchemy registers them
-from models import blocks  # noqa: F401
+from models import block, bin  # noqa: F401
 
-# Import routers
 from routers import blocks as blocks_router
+from routers import bins as bins_router    
+
+
 
 
 app = FastAPI(
@@ -34,7 +36,7 @@ app.add_middleware(
 
 # Register routers
 app.include_router(blocks_router.router)
-
+app.include_router(bins_router.router)
 
 @app.get("/", tags=["health"])
 async def root():
