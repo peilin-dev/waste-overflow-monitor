@@ -8,6 +8,7 @@ from core.database import get_db
 from schemas.bin import BinCreate, BinUpdate, BinOut, BinFillReport
 from crud import bins as crud_bins
 from crud import blocks as crud_blocks
+from services.task_service import maybe_create_overflow_task
 
 router = APIRouter(prefix="/api/bins", tags=["bins"])
 
@@ -100,7 +101,7 @@ async def delete_bin(bin_id: int, db: AsyncSession = Depends(get_db)):
     summary="Sensor reports fill level",
     description=(
         "Called by hardware sensor to update current fill percentage. "
-        "TODO: when fill >= 90, auto-create a pending task (after Task module is built)."
+        "If fill >= 90 and no open task exists, a pending task is auto-created."
     ),
 )
 async def report_fill(
@@ -114,8 +115,7 @@ async def report_fill(
 
     updated = await crud_bins.update_fill(db, bin_, payload.fill)
 
-    # TODO: 等 Task 模块写完后,在这里加自动派单逻辑:
-    # if updated.current_fill >= 90 and not has_active_task(db, bin_id):
-    #     await crud_tasks.create_from_overflow(db, updated)
+    # Auto-task creation if overflow detected
+    await maybe_create_overflow_task(db, updated)
 
     return updated
