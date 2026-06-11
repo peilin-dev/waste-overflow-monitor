@@ -39,11 +39,19 @@ class BinFillReport(BaseModel):
     fill: int = Field(..., ge=0, le=100, examples=[75])
 
 
+class BinStats(BaseModel):
+    """Bin counts by computed status."""
+    total: int
+    normal: int    # fill < 60
+    warning: int   # 60 <= fill < 90
+    full: int      # fill >= 90
+
+
 class BinOut(BinBase):
     """Response shape — includes DB fields + computed status."""
     id: int
     current_fill: int
-    last_updated: Optional[datetime]
+    updated_at: Optional[datetime]
 
     model_config = ConfigDict(from_attributes=True)
 

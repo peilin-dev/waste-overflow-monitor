@@ -6,7 +6,7 @@ from schemas.user import UserOut
 
 class LoginRequest(BaseModel):
     """Login request body."""
-    account: str = Field(..., examples=["admin"])
+    username: str = Field(..., examples=["admin"])
     password: str = Field(..., examples=["admin123"])
 
 

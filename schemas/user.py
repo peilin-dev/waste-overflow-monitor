@@ -1,18 +1,18 @@
 """Pydantic schemas for User."""
 
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Optional, Literal, Dict
 from pydantic import BaseModel, Field, ConfigDict
 
 
 class UserBase(BaseModel):
     """Shared user fields (without password)."""
     name: str = Field(..., min_length=1, max_length=50, examples=["Alice"])
-    account: str = Field(..., min_length=3, max_length=50, examples=["alice01"])
+    username: str = Field(..., min_length=3, max_length=50, examples=["alice01"])
     role: Literal["admin", "cleaner"] = Field(..., examples=["cleaner"])
     phone: Optional[str] = Field(None, max_length=20)
     zone: Optional[str] = Field(None, max_length=50)
-    shift: Optional[Literal["morning", "evening", "night"]] = None
+    shift: Optional[str] = Field(None, max_length=50)
 
 
 class UserCreate(UserBase):
@@ -26,13 +26,30 @@ class UserUpdate(BaseModel):
     role: Optional[Literal["admin", "cleaner"]] = None
     phone: Optional[str] = Field(None, max_length=20)
     zone: Optional[str] = Field(None, max_length=50)
-    shift: Optional[Literal["morning", "evening", "night"]] = None
+    shift: Optional[str] = Field(None, max_length=50)
     status: Optional[Literal["active", "inactive"]] = None
 
 
 class UserPasswordReset(BaseModel):
     """Reset password payload."""
     new_password: str = Field(..., min_length=6, max_length=100)
+
+
+class PasswordChangeRequest(BaseModel):
+    """User changes their own password."""
+    old_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=6, max_length=100)
+
+
+class UserPerformance(BaseModel):
+    """Cleaner performance metrics."""
+    user_id: int
+    name: str
+    total_tasks: int
+    completed_tasks: int
+    pending_tasks: int
+    average_rating: Optional[float]
+    rating_distribution: Dict[str, int]
 
 
 class UserOut(UserBase):

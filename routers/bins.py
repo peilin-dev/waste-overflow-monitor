@@ -5,12 +5,18 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from schemas.bin import BinCreate, BinUpdate, BinOut, BinFillReport
+from core.deps import verify_sensor_key
+from schemas.bin import BinCreate, BinUpdate, BinOut, BinFillReport, BinStats
 from crud import bins as crud_bins
 from crud import blocks as crud_blocks
 from services.task_service import maybe_create_overflow_task
 
 router = APIRouter(prefix="/api/bins", tags=["bins"])
+
+
+@router.get("/stats", response_model=BinStats, summary="Bin counts by status")
+async def bin_stats(db: AsyncSession = Depends(get_db)):
+    return await crud_bins.get_stats(db)
 
 
 @router.get(
@@ -80,6 +86,26 @@ async def update_bin(
     bin_ = await crud_bins.get_by_id(db, bin_id)
     if not bin_:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Bin not found")
+
+    # Check sensor_id uniqueness if it's being changed
+    if payload.sensor_id is not None and payload.sensor_id != bin_.sensor_id:
+        if await crud_bins.get_by_sensor_id(db, payload.sensor_id):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"Sensor ID '{payload.sensor_id}' already exists.",
+            )
+
+    # Check position uniqueness if floor or bin_number is being changed
+    new_floor = payload.floor if payload.floor is not None else bin_.floor
+    new_bin_number = payload.bin_number if payload.bin_number is not None else bin_.bin_number
+    if new_floor != bin_.floor or new_bin_number != bin_.bin_number:
+        if await crud_bins.get_at_position(db, bin_.block_id, new_floor, new_bin_number):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"A bin already exists at Block {bin_.block_id}, "
+                f"Floor {new_floor}, Bin {new_bin_number}.",
+            )
+
     return await crud_bins.update(db, bin_, payload)
 
 
@@ -108,6 +134,7 @@ async def report_fill(
     bin_id: int,
     payload: BinFillReport,
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(verify_sensor_key),
 ):
     bin_ = await crud_bins.get_by_id(db, bin_id)
     if not bin_:

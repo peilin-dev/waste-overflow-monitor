@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import Optional, Sequence
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.bin import Bin
@@ -76,7 +76,7 @@ async def update(db: AsyncSession, bin_: Bin, payload: BinUpdate) -> Bin:
 async def update_fill(db: AsyncSession, bin_: Bin, fill: int) -> Bin:
     """Update fill level from sensor report."""
     bin_.current_fill = fill
-    bin_.last_updated = datetime.now()
+    bin_.updated_at = datetime.now()
     await db.commit()
     await db.refresh(bin_)
     return bin_
@@ -85,3 +85,15 @@ async def update_fill(db: AsyncSession, bin_: Bin, fill: int) -> Bin:
 async def delete(db: AsyncSession, bin_: Bin) -> None:
     await db.delete(bin_)
     await db.commit()
+
+
+async def get_stats(db: AsyncSession) -> dict:
+    """Count bins by derived status (normal/warning/full)."""
+    result = await db.execute(select(Bin.current_fill))
+    fills = list(result.scalars().all())
+    return {
+        "total": len(fills),
+        "normal": sum(1 for f in fills if f < 60),
+        "warning": sum(1 for f in fills if 60 <= f < 90),
+        "full": sum(1 for f in fills if f >= 90),
+    }

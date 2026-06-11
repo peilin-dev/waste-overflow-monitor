@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -25,19 +26,19 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
     summary="Login (admin or cleaner)",
 )
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
-    # 1. Find user by account
-    user = await crud_users.get_by_account(db, payload.account)
+    # 1. Find user by username
+    user = await crud_users.get_by_username(db, payload.username)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid account or password",
+            detail="Invalid username or password",
         )
 
     # 2. Verify password (compare with hashed)
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid account or password",
+            detail="Invalid username or password",
         )
 
     # 3. Check account status
@@ -56,7 +57,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         data={
             "sub": str(user.id),    # 'sub' is JWT standard for "subject" (user ID)
             "role": user.role,
-            "account": user.account,
+            "username": user.username,
         }
     )
 
@@ -66,6 +67,35 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user=UserOut.model_validate(user),
     )
+
+
+@router.post(
+    "/token",
+    include_in_schema=False,  # Hidden from API docs — used only by Swagger UI's Authorize button
+)
+async def oauth2_token(
+    form: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Standard OAuth2 password flow endpoint for Swagger UI compatibility."""
+    user = await crud_users.get_by_username(db, form.username)
+    if not user or not verify_password(form.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if user.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is inactive",
+        )
+    user.last_seen = datetime.now()
+    await db.commit()
+    token = create_access_token(
+        data={"sub": str(user.id), "role": user.role, "username": user.username}
+    )
+    return {"access_token": token, "token_type": "bearer"}
 
 
 @router.get(

@@ -8,6 +8,28 @@ from pydantic import BaseModel, Field, ConfigDict
 TaskResult = Literal["cleaned", "false_alarm", "damaged", "unable"]
 
 
+class TaskBinInfo(BaseModel):
+    """Embedded bin info inside task response."""
+    id: int
+    block_id: int
+    floor: int
+    bin_number: int
+    sensor_id: str
+    current_fill: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TaskCleanerInfo(BaseModel):
+    """Embedded cleaner info inside task response."""
+    id: int
+    name: str
+    username: str
+    phone: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TaskCreate(BaseModel):
     """Admin manually creates a task."""
     bin_id: int = Field(..., ge=1, examples=[1])
@@ -30,21 +52,28 @@ class TaskRate(BaseModel):
     comment: Optional[str] = Field(None, max_length=500)
 
 
+class TaskAssign(BaseModel):
+    """Admin assigns a pending task to a cleaner."""
+    cleaner_id: int = Field(..., ge=1, examples=[1001])
+
+
 class TaskOut(BaseModel):
-    """Task response — all fields."""
+    """Task response — all fields with embedded bin and cleaner info."""
     id: int
     bin_id: int
     cleaner_id: Optional[int]
     status: str
     created_at: datetime
-    accept_time: Optional[datetime]
-    complete_time: Optional[datetime]
+    accepted_at: Optional[datetime]
+    completed_at: Optional[datetime]
     result: Optional[str]
     photos: Optional[List[str]]
     rating: Optional[int]
     comment: Optional[str]
     rated_by: Optional[int]
     rated_at: Optional[datetime]
+    bin: Optional[TaskBinInfo] = None
+    cleaner: Optional[TaskCleanerInfo] = None
 
     model_config = ConfigDict(from_attributes=True)
 

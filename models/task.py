@@ -1,11 +1,15 @@
 """Task ORM model — cleaning task with state machine."""
 
 from datetime import datetime
-from typing import Optional, List
+from typing import TYPE_CHECKING, Optional, List
 from sqlalchemy import Integer, String, DateTime, Text, ForeignKey, JSON
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base
+
+if TYPE_CHECKING:
+    from models.bin import Bin
+    from models.user import User
 
 
 class Task(Base):
@@ -32,8 +36,8 @@ class Task(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now, nullable=False
     )
-    accept_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    complete_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    accepted_at: Mapped[Optional[datetime]] = mapped_column("accept_time", DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column("complete_time", DateTime, nullable=True)
 
     # Completion data (cleaner-filled)
     result: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
@@ -46,6 +50,12 @@ class Task(Base):
         Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True
     )
     rated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Relationships (lazy="raise" — must be explicitly eager-loaded)
+    bin: Mapped["Bin"] = relationship("Bin", foreign_keys=[bin_id], lazy="raise")
+    cleaner: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys=[cleaner_id], lazy="raise"
+    )
 
     def __repr__(self):
         return f"<Task(id={self.id}, bin={self.bin_id}, status={self.status})>"

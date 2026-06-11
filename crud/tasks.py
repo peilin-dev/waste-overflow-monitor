@@ -3,10 +3,16 @@
 from datetime import datetime
 from typing import Optional, Sequence
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.task import Task
 from schemas.task import TaskCreate, TaskReport, TaskRate
+
+
+def _with_relations(stmt):
+    """Apply eager-load options for bin and cleaner."""
+    return stmt.options(selectinload(Task.bin), selectinload(Task.cleaner))
 
 
 async def get_all(
@@ -14,23 +20,31 @@ async def get_all(
     status: Optional[str] = None,
     cleaner_id: Optional[int] = None,
     bin_id: Optional[int] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 500,
 ) -> Sequence[Task]:
-    stmt = select(Task)
+    stmt = _with_relations(select(Task))
     if status:
         stmt = stmt.where(Task.status == status)
     if cleaner_id is not None:
         stmt = stmt.where(Task.cleaner_id == cleaner_id)
     if bin_id is not None:
         stmt = stmt.where(Task.bin_id == bin_id)
+    if start_date:
+        stmt = stmt.where(Task.created_at >= start_date)
+    if end_date:
+        stmt = stmt.where(Task.created_at <= end_date)
     stmt = stmt.order_by(Task.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
 async def get_by_id(db: AsyncSession, task_id: int) -> Optional[Task]:
-    return await db.get(Task, task_id)
+    stmt = _with_relations(select(Task)).where(Task.id == task_id)
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
 async def create(db: AsyncSession, payload: TaskCreate) -> Task:
@@ -41,7 +55,7 @@ async def create(db: AsyncSession, payload: TaskCreate) -> Task:
     )
     db.add(task)
     await db.commit()
-    await db.refresh(task)
+    await db.refresh(task, attribute_names=["bin", "cleaner"])
     return task
 
 
@@ -49,32 +63,33 @@ async def accept(db: AsyncSession, task: Task, cleaner_id: int) -> Task:
     """State transition: pending → in_progress."""
     task.cleaner_id = cleaner_id
     task.status = "in_progress"
-    task.accept_time = datetime.now()
+    task.accepted_at = datetime.now()
     await db.commit()
-    await db.refresh(task)
+    await db.refresh(task, attribute_names=["bin", "cleaner"])
     return task
 
 
 async def report(db: AsyncSession, task: Task, payload: TaskReport) -> Task:
     """State transition: in_progress → completed."""
     task.status = "completed"
-    task.complete_time = datetime.now()
+    task.completed_at = datetime.now()
     task.result = payload.result
     task.photos = payload.photos
     await db.commit()
-    await db.refresh(task)
+    await db.refresh(task, attribute_names=["bin", "cleaner"])
     return task
 
 
 async def rate(db: AsyncSession, task: Task, payload: TaskRate, admin_id: int) -> Task:
-    """State transition: completed → rated."""
-    task.status = "rated"
+    """State transition: completed → rated (or re-rate an already rated task)."""
+    if task.status == "completed":
+        task.status = "rated"
     task.rating = payload.rating
     task.comment = payload.comment
     task.rated_by = admin_id
     task.rated_at = datetime.now()
     await db.commit()
-    await db.refresh(task)
+    await db.refresh(task, attribute_names=["bin", "cleaner"])
     return task
 
 

@@ -31,8 +31,8 @@ async def get_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
     return await db.get(User, user_id)
 
 
-async def get_by_account(db: AsyncSession, account: str) -> Optional[User]:
-    result = await db.execute(select(User).where(User.account == account))
+async def get_by_username(db: AsyncSession, username: str) -> Optional[User]:
+    result = await db.execute(select(User).where(User.username == username))
     return result.scalars().first()
 
 

@@ -6,11 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.deps import get_current_user, get_current_admin
-from schemas.task import TaskCreate, TaskReport, TaskRate, TaskOut, TaskStats
+from datetime import datetime
+from schemas.task import TaskCreate, TaskReport, TaskRate, TaskAssign, TaskOut, TaskStats
 from crud import tasks as crud_tasks
 from crud import bins as crud_bins
 from crud import users as crud_users
 from models.user import User
+from services.task_service import has_open_task_for_bin
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -25,13 +27,16 @@ async def list_tasks(
     status_filter: Optional[str] = Query(None, alias="status"),
     cleaner_id: Optional[int] = Query(None),
     bin_id: Optional[int] = Query(None),
+    start_date: Optional[datetime] = Query(None, description="Inclusive, e.g. 2026-06-01T00:00:00"),
+    end_date: Optional[datetime] = Query(None, description="Inclusive, e.g. 2026-06-30T23:59:59"),
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(500, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
 ):
     return await crud_tasks.get_all(
         db, status=status_filter, cleaner_id=cleaner_id,
-        bin_id=bin_id, skip=skip, limit=limit
+        bin_id=bin_id, start_date=start_date, end_date=end_date,
+        skip=skip, limit=limit
     )
 
 
@@ -59,6 +64,12 @@ async def create_task(
             status.HTTP_404_NOT_FOUND, f"Bin {payload.bin_id} not found"
         )
 
+    if await has_open_task_for_bin(db, payload.bin_id):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Bin {payload.bin_id} already has an open (pending/in_progress) task",
+        )
+
     if payload.cleaner_id is not None:
         cleaner = await crud_users.get_by_id(db, payload.cleaner_id)
         if not cleaner:
@@ -75,6 +86,49 @@ async def create_task(
 
 
 @router.post(
+    "/{task_id}/assign",
+    response_model=TaskOut,
+    summary="Admin assigns/reassigns pending task to a cleaner",
+)
+async def assign_task(
+    task_id: int,
+    payload: TaskAssign,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
+):
+    task = await crud_tasks.get_by_id(db, task_id)
+    if not task:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Task not found")
+
+    if task.status != "pending":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Cannot assign: task status is '{task.status}', expected 'pending'",
+        )
+
+    cleaner = await crud_users.get_by_id(db, payload.cleaner_id)
+    if not cleaner:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"User {payload.cleaner_id} not found"
+        )
+    if cleaner.role != "cleaner":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"User {payload.cleaner_id} is not a cleaner",
+        )
+    if cleaner.status != "active":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"User {payload.cleaner_id} is inactive",
+        )
+
+    task.cleaner_id = payload.cleaner_id
+    await db.commit()
+    await db.refresh(task, attribute_names=["bin", "cleaner"])
+    return task
+
+
+@router.post(
     "/{task_id}/accept",
     response_model=TaskOut,
     summary="Cleaner accepts task (pending → in_progress)",
@@ -88,16 +142,17 @@ async def accept_task(
     if not task:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Task not found")
 
+    # Role check first — return correct 403 before state machine check
+    if current_user.role != "cleaner":
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Only cleaners can accept tasks"
+        )
+
     # State machine check
     if task.status != "pending":
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             f"Cannot accept: task status is '{task.status}', expected 'pending'",
-        )
-
-    if current_user.role != "cleaner":
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN, "Only cleaners can accept tasks"
         )
 
     # If pre-assigned, must be the same cleaner
@@ -155,10 +210,10 @@ async def rate_task(
     if not task:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Task not found")
 
-    if task.status != "completed":
+    if task.status not in ("completed", "rated"):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            f"Cannot rate: task status is '{task.status}', expected 'completed'",
+            f"Cannot rate: task status is '{task.status}', expected 'completed' or 'rated'",
         )
 
     return await crud_tasks.rate(db, task, payload, current_admin.id)

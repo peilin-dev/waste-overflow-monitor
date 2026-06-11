@@ -17,9 +17,9 @@ class User(Base):
     name: Mapped[str] = mapped_column(
         String(50), nullable=False, comment="Display name"
     )
-    account: Mapped[str] = mapped_column(
-        String(50), unique=True, nullable=False, index=True,
-        comment="Login account"
+    username: Mapped[str] = mapped_column(
+        "account", String(50), unique=True, nullable=False, index=True,
+        comment="Login username"
     )
     password_hash: Mapped[str] = mapped_column(
         String(255), nullable=False,
@@ -31,7 +31,7 @@ class User(Base):
     )
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     zone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    shift: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    shift: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), default="active", nullable=False,
         comment="'active' or 'inactive' (soft delete)"
@@ -42,4 +42,4 @@ class User(Base):
     )
 
     def __repr__(self):
-        return f"<User(id={self.id}, account={self.account}, role={self.role})>"
+        return f"<User(id={self.id}, username={self.username}, role={self.role})>"

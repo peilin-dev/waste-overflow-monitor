@@ -35,8 +35,8 @@ class Bin(Base):
         Integer, default=0, nullable=False,
         comment="Current fill percentage (0-100)"
     )
-    last_updated: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True,
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        "last_updated", DateTime, nullable=True,
         comment="Last sensor report time"
     )
 
