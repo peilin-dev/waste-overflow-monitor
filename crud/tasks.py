@@ -47,6 +47,11 @@ async def get_by_id(db: AsyncSession, task_id: int) -> Optional[Task]:
     return result.scalars().first()
 
 
+async def has_tasks_for_bin(db: AsyncSession, bin_id: int) -> bool:
+    result = await db.execute(select(Task.id).where(Task.bin_id == bin_id).limit(1))
+    return result.scalar_one_or_none() is not None
+
+
 async def create(db: AsyncSession, payload: TaskCreate) -> Task:
     task = Task(
         bin_id=payload.bin_id,

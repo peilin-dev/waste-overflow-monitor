@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.deps import verify_sensor_key
+from core.deps import get_current_admin, verify_sensor_key
+from models.user import User
 from schemas.bin import BinCreate, BinUpdate, BinOut, BinFillReport, BinStats
 from crud import bins as crud_bins
 from crud import blocks as crud_blocks
+from crud import tasks as crud_tasks
 from services.task_service import maybe_create_overflow_task
 
 router = APIRouter(prefix="/api/bins", tags=["bins"])
@@ -48,7 +50,7 @@ async def get_bin(bin_id: int, db: AsyncSession = Depends(get_db)):
     status_code=status.HTTP_201_CREATED,
     summary="Create a new bin",
 )
-async def create_bin(payload: BinCreate, db: AsyncSession = Depends(get_db)):
+async def create_bin(payload: BinCreate, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin)):
     # 1. Verify block exists
     block = await crud_blocks.get_by_id(db, payload.block_id)
     if not block:
@@ -82,6 +84,7 @@ async def update_bin(
     bin_id: int,
     payload: BinUpdate,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
 ):
     bin_ = await crud_bins.get_by_id(db, bin_id)
     if not bin_:
@@ -114,10 +117,15 @@ async def update_bin(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a bin",
 )
-async def delete_bin(bin_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_bin(bin_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin)):
     bin_ = await crud_bins.get_by_id(db, bin_id)
     if not bin_:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Bin not found")
+    if await crud_tasks.has_tasks_for_bin(db, bin_id):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Cannot delete bin while tasks still reference it",
+        )
     await crud_bins.delete(db, bin_)
 
 

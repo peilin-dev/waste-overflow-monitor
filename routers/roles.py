@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from core.deps import get_current_admin
+from models.user import User
 from schemas.role import RoleCreate, RoleUpdate, RoleOut
 from crud import roles as crud_roles
 from models.role import Role
@@ -48,7 +50,7 @@ async def get_role(role_id: int, db: AsyncSession = Depends(get_db)):
     status_code=status.HTTP_201_CREATED,
     summary="Create a role",
 )
-async def create_role(payload: RoleCreate, db: AsyncSession = Depends(get_db)):
+async def create_role(payload: RoleCreate, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin)):
     if await crud_roles.get_by_name(db, payload.name):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -64,10 +66,17 @@ async def update_role(
     role_id: int,
     payload: RoleUpdate,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
 ):
     role = await crud_roles.get_by_id(db, role_id)
     if not role:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Role not found")
+    if payload.name is not None and payload.name != role.name:
+        if await crud_roles.get_by_name(db, payload.name):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"Role '{payload.name}' already exists.",
+            )
     role = await crud_roles.update(db, role, payload)
     counts = await crud_roles.count_users_per_role(db)
     return _to_out(role, counts)
@@ -78,7 +87,7 @@ async def update_role(
     response_model=RoleOut,
     summary="Deactivate a role (soft delete)",
 )
-async def deactivate_role(role_id: int, db: AsyncSession = Depends(get_db)):
+async def deactivate_role(role_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin)):
     role = await crud_roles.get_by_id(db, role_id)
     if not role:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Role not found")
@@ -92,7 +101,7 @@ async def deactivate_role(role_id: int, db: AsyncSession = Depends(get_db)):
     response_model=RoleOut,
     summary="Restore an inactive role",
 )
-async def restore_role(role_id: int, db: AsyncSession = Depends(get_db)):
+async def restore_role(role_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin)):
     role = await crud_roles.get_by_id(db, role_id)
     if not role:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Role not found")

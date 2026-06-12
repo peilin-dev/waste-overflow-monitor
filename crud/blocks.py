@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.block import Block
+from models.bin import Bin
 from schemas.block import BlockCreate, BlockUpdate
 
 
@@ -45,3 +46,8 @@ async def update(db: AsyncSession, block: Block, payload: BlockUpdate) -> Block:
 async def delete(db: AsyncSession, block: Block) -> None:
     await db.delete(block)
     await db.commit()
+
+
+async def has_bins(db: AsyncSession, block_id: int) -> bool:
+    result = await db.execute(select(Bin.id).where(Bin.block_id == block_id).limit(1))
+    return result.scalar_one_or_none() is not None
