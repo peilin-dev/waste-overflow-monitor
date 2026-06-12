@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   backend:
-    build: .
+    image: ghcr.io/peilin-dev/waste-overflow-monitor:latest
     container_name: waste_backend
     environment:
       DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASSWORD}@db:3306/waste_monitor
@@ -31,9 +31,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ../waste-monitor-web
-      dockerfile: Dockerfile
+    image: ghcr.io/peilin-dev/waste-overflow-monitor-admin:latest
     container_name: waste_frontend
     ports:
       - "80:80"
