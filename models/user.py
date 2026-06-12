@@ -18,7 +18,7 @@ class User(Base):
         String(50), nullable=False, comment="Display name"
     )
     username: Mapped[str] = mapped_column(
-        "account", String(50), unique=True, nullable=False, index=True,
+        String(50), unique=True, nullable=False, index=True,
         comment="Login username"
     )
     password_hash: Mapped[str] = mapped_column(
