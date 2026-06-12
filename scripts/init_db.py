@@ -9,7 +9,7 @@ Usage:
 import asyncio
 from datetime import datetime, timedelta
 
-from core.database import async_session
+from core.database import AsyncSessionLocal as async_session
 from core.security import hash_password
 from models.user import User
 from models.block import Block
