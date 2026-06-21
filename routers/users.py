@@ -16,6 +16,16 @@ from models.user import User
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 
+async def _active_admin_count(db: AsyncSession, exclude_id: int) -> int:
+    return await db.scalar(
+        select(func.count(User.id)).where(
+            User.role == "admin",
+            User.status == "active",
+            User.id != exclude_id,
+        )
+    ) or 0
+
+
 @router.get("", response_model=List[UserOut], summary="List users")
 async def list_users(
     role: Optional[str] = Query(None, description="Filter: 'admin' or 'cleaner'"),
@@ -61,6 +71,12 @@ async def update_user(
     user = await crud_users.get_by_id(db, user_id)
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if (
+        user.role == "admin"
+        and payload.status == "inactive"
+        and await _active_admin_count(db, user.id) == 0
+    ):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cannot deactivate the last active admin")
     return await crud_users.update(db, user, payload)
 
 
@@ -90,6 +106,8 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db), _: User 
     user = await crud_users.get_by_id(db, user_id)
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if user.role == "admin" and await _active_admin_count(db, user.id) == 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cannot deactivate the last active admin")
     await crud_users.soft_delete(db, user)
 
 
