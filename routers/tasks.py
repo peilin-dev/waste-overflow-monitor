@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 
 @router.get("/stats", response_model=TaskStats, summary="Task counts by status")
-async def task_stats(db: AsyncSession = Depends(get_db)):
+async def task_stats(db: AsyncSession = Depends(get_db), _: User = Depends(get_current_user)):
     return await crud_tasks.get_stats(db)
 
 
@@ -32,6 +32,7 @@ async def list_tasks(
     skip: int = Query(0, ge=0),
     limit: int = Query(500, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
 ):
     return await crud_tasks.get_all(
         db, status=status_filter, cleaner_id=cleaner_id,
@@ -41,7 +42,7 @@ async def list_tasks(
 
 
 @router.get("/{task_id}", response_model=TaskOut, summary="Get one task")
-async def get_task(task_id: int, db: AsyncSession = Depends(get_db)):
+async def get_task(task_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_user)):
     task = await crud_tasks.get_by_id(db, task_id)
     if not task:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Task not found")
@@ -179,6 +180,9 @@ async def report_task(
     task = await crud_tasks.get_by_id(db, task_id)
     if not task:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Task not found")
+
+    if current_user.role != "cleaner":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only cleaners can report tasks")
 
     if task.status != "in_progress":
         raise HTTPException(

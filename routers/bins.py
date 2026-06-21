@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.deps import get_current_admin, verify_sensor_key
+from core.deps import get_current_admin, get_current_user, verify_sensor_key
 from models.user import User
 from schemas.bin import BinCreate, BinUpdate, BinOut, BinFillReport, BinStats
 from crud import bins as crud_bins
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/bins", tags=["bins"])
 
 
 @router.get("/stats", response_model=BinStats, summary="Bin counts by status")
-async def bin_stats(db: AsyncSession = Depends(get_db)):
+async def bin_stats(db: AsyncSession = Depends(get_db), _: User = Depends(get_current_user)):
     return await crud_bins.get_stats(db)
 
 
@@ -32,12 +32,13 @@ async def list_bins(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
 ):
     return await crud_bins.get_all(db, block_id=block_id, min_fill=min_fill, skip=skip, limit=limit)
 
 
 @router.get("/{bin_id}", response_model=BinOut, summary="Get one bin")
-async def get_bin(bin_id: int, db: AsyncSession = Depends(get_db)):
+async def get_bin(bin_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_user)):
     bin_ = await crud_bins.get_by_id(db, bin_id)
     if not bin_:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Bin not found")

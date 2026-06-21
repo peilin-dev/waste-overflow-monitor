@@ -33,12 +33,13 @@ async def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
 ):
     return await crud_users.get_all(db, role=role, status=status, skip=skip, limit=limit)
 
 
 @router.get("/{user_id}", response_model=UserOut, summary="Get one user")
-async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user(user_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin)):
     user = await crud_users.get_by_id(db, user_id)
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")

@@ -12,11 +12,11 @@ from core.security import hash_password
 async def get_all(
     db: AsyncSession,
     role: Optional[str] = None,
-    status: Optional[str] = "active",
+    status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
 ) -> Sequence[User]:
-    """List users with optional filters. Default: only active users."""
+    """List users with optional filters. Default: all users (no status filter)."""
     stmt = select(User)
     if role:
         stmt = stmt.where(User.role == role)

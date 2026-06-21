@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.deps import get_current_admin
+from core.deps import get_current_admin, get_current_user
 from models.user import User
 from schemas.block import BlockCreate, BlockUpdate, BlockOut
 from crud import blocks as crud_blocks
@@ -18,12 +18,12 @@ router = APIRouter(prefix="/api/blocks", tags=["blocks"])
 
 
 @router.get("", response_model=List[BlockOut], summary="List all blocks")
-async def list_blocks(db: AsyncSession = Depends(get_db)):
+async def list_blocks(db: AsyncSession = Depends(get_db), _: User = Depends(get_current_user)):
     return await crud_blocks.get_all(db)
 
 
 @router.get("/{block_id}", response_model=BlockOut, summary="Get one block by id")
-async def get_block(block_id: int, db: AsyncSession = Depends(get_db)):
+async def get_block(block_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_user)):
     block = await crud_blocks.get_by_id(db, block_id)
     if not block:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Block not found")
