@@ -55,6 +55,8 @@ waste-overflow-monitor/
 
 ## 本地开发环境
 
+> 使用 PyCharm 的同学请看：[docs/local-setup.md](docs/local-setup.md)
+
 **前置条件**：Python 3.11、MySQL 8.0
 
 ```bash
@@ -85,11 +87,7 @@ uvicorn main:app --reload
 初始化演示数据（只需跑一次）：
 
 ```bash
-# Windows
-set PYTHONPATH=. && python scripts/init_db.py
-
-# Mac/Linux
-PYTHONPATH=. python scripts/init_db.py
+python scripts/init_db.py
 ```
 
 启动完成后：
