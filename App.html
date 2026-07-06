@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWOMS - Mobile App (Integrated)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* === 原有的完整 CSS 样式 === */
+        :root {
+            --primary-blue: #3B82F6; --pale-blue: #EFF6FF; --light-blue: #DBEAFE;
+            --white: #FFFFFF; --text-dark: #1E293B; --text-gray: #64748B;
+            --danger-red: #EF4444; --success-green: #10B981; --warning-orange: #F59E0B;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #E2E8F0; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .mobile-frame {
+            width: 390px; height: 844px; background-color: #F8FAFC; border-radius: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; border: 8px solid #1E293B;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .status-bar { height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 14px; font-weight: 600; color: var(--text-dark); background: var(--white); z-index: 10; }
+        .content-area { flex: 1; position: relative; overflow-x: hidden; background: #F8FAFC; }
+        input[type="radio"] { display: none; }
+        .page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; padding-bottom: 100px; overflow-y: auto; }
+        #tab-clock:checked ~ .content-area .page-clock,
+        #tab-tasks:checked ~ .content-area .page-tasks,
+        #tab-report:checked ~ .content-area .page-report,
+        #tab-score:checked ~ .content-area .page-score,
+        #tab-admin:checked ~ .content-area .page-admin { opacity: 1; pointer-events: auto; z-index: 5; }
+        .bottom-nav { position: absolute; bottom: 0; left: 0; width: 100%; background: var(--white); height: 85px; display: flex; justify-content: space-around; border-top: 1px solid #E2E8F0; z-index: 100; border-bottom-left-radius: 32px; border-bottom-right-radius: 32px; padding-bottom: 15px; }
+        .nav-label { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-gray); cursor: pointer; font-size: 10px; font-weight: 600; gap: 4px; }
+        .nav-label i { font-size: 20px; margin-bottom: 2px; }
+        #tab-clock:checked ~ .bottom-nav .label-clock,
+        #tab-tasks:checked ~ .bottom-nav .label-tasks,
+        #tab-report:checked ~ .bottom-nav .label-report,
+        #tab-score:checked ~ .bottom-nav .label-score,
+        #tab-admin:checked ~ .bottom-nav .label-admin { color: var(--primary-blue); }
+        .header-section { background: var(--white); padding: 20px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 20px; }
+        .header-section h2 { color: var(--text-dark); font-size: 24px; margin-bottom: 5px; }
+        .header-section p { color: var(--text-gray); font-size: 14px; }
+        .card { background: var(--white); margin: 0 20px 15px; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid rgba(59, 130, 246, 0.08); }
+        .btn-primary { width: 100%; background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
+        .user-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .avatar { width: 50px; height: 50px; background: var(--pale-blue); border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 24px; color: var(--primary-blue); }
+        .time-cards { display: flex; gap: 10px; margin-bottom: 40px; }
+        .time-box { flex: 1; background: #F8FAFC; padding: 15px; border-radius: 12px; border: 1px solid #E2E8F0; }
+        .time-box h4 { font-size: 14px; color: var(--text-gray); margin-bottom: 5px; }
+        .time-box p { font-size: 16px; font-weight: bold; color: var(--text-dark); }
+        .time-box .status { font-size: 12px; margin-top: 5px; color: var(--success-green); display: flex; align-items: center; gap: 4px; }
+        .big-clock-btn { width: 160px; height: 160px; border-radius: 50%; background: linear-gradient(135deg, #60A5FA, #2563EB); color: white; border: none; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4); margin: 0 auto 30px; cursor: pointer; }
+        .big-clock-btn h2 { font-size: 24px; font-weight: bold; margin: 0; }
+        .big-clock-btn p { font-size: 14px; opacity: 0.9; margin-top: 5px; }
+        .location-check { text-align: center; color: var(--text-gray); font-size: 13px; display: flex; justify-content: center; align-items: center; gap: 6px; }
+        .bin-info { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .bin-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 20px; background: #FEE2E2; color: var(--danger-red); }
+        .bar-bg { height: 8px; background: #F1F5F9; border-radius: 4px; margin: 10px 0; }
+        .bar-fill { height: 100%; width: 92%; background: var(--danger-red); border-radius: 4px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 14px; font-weight: 600; color: var(--text-dark); margin-bottom: 8px; }
+        .upload-area { border: 2px dashed #CBD5E1; border-radius: 12px; height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-gray); background: #F8FAFC; cursor: pointer; }
+        select { width: 100%; border: 1px solid #CBD5E1; border-radius: 10px; padding: 12px; font-size: 14px; background: var(--white); outline: none; }
+        .score-circle { width: 140px; height: 140px; border-radius: 50%; border: 8px solid var(--primary-blue); margin: 20px auto; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--pale-blue); }
+        .score-circle h1 { font-size: 40px; color: var(--primary-blue); line-height: 1; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .stat-box { background: #F1F5F9; padding: 15px; border-radius: 12px; text-align: center; }
+        .stat-box h3 { font-size: 24px; color: var(--text-dark); }
+        .stat-box p { font-size: 12px; color: var(--text-gray); margin-top: 4px; }
+        .task-list-header { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: var(--text-dark); margin-bottom: 10px; }
+        .star-rating { color: #CBD5E1; font-size: 22px; display: flex; gap: 5px; margin: 10px 0; cursor: pointer; }
+        .star-rating .active { color: var(--warning-orange); }
+        .photo-proofs { display: flex; gap: 10px; margin: 10px 0; }
+        .photo-thumb { width: 60px; height: 60px; background: #E2E8F0; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 12px; color: var(--text-gray); background-size: cover; background-position: center; }
+        input[type="text"], input[type="password"] { width: 100%; border: 1px solid #CBD5E1; border-radius: 10px; padding: 12px; font-size: 14px; background: var(--white); outline: none; }
+        .undo-banner { background: #ECFDF5; border: 1px solid #10B981; border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .undo-btn { color: var(--danger-red); font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 6px 12px; background: #FEE2E2; border-radius: 8px; }
+
+        /* Login Overlay */
+        #login-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #F8FAFC; z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        #toast { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background: #1E293B; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 1000; display: none; transition: opacity 0.3s; }
+        
+        /* Photo Preview Styles */
+        #photo-preview-container { display: none; margin-top: 10px; position: relative; }
+        #photo-preview { width: 100%; border-radius: 12px; height: 180px; object-fit: cover; border: 1px solid #CBD5E1; }
+        .remove-photo-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-frame">
+        <div class="status-bar">
+            <span>09:41</span>
+            <div style="display: flex; gap: 5px;"><i class="fa-solid fa-signal"></i><i class="fa-solid fa-wifi"></i><i class="fa-solid fa-battery-full"></i></div>
+        </div>
+
+        <!-- 登录覆盖层 -->
+        <div id="login-overlay">
+            <i class="fa-solid fa-recycle" style="font-size: 50px; color: var(--primary-blue); margin-bottom: 20px;"></i>
+            <h2 style="margin-bottom: 5px; color: var(--text-dark);">SWOMS App</h2>
+            <p style="margin-bottom: 30px; color: var(--text-gray); font-size: 14px;">Staff Login Portal</p>
+            
+            <div style="width: 100%; margin-bottom: 15px;">
+                <input type="text" id="login-username" placeholder="Username (e.g. liwei)" value="liwei">
+            </div>
+            <div style="width: 100%; margin-bottom: 20px;">
+                <input type="password" id="login-password" placeholder="Password" value="cleaner123">
+            </div>
+            <button class="btn-primary" onclick="appLogin()">Login System</button>
+            <p style="margin-top: 20px; font-size: 12px; color: var(--text-gray);">Backend must be running on localhost:8000</p>
+        </div>
+
+        <!-- 吐司提示 -->
+        <div id="toast">Message</div>
+
+        <input type="radio" name="tabs" id="tab-clock" checked>
+        <input type="radio" name="tabs" id="tab-tasks">
+        <input type="radio" name="tabs" id="tab-report">
+        <input type="radio" name="tabs" id="tab-score">
+        <input type="radio" name="tabs" id="tab-admin">
+
+        <div class="content-area">
+            
+            <!-- Page 1: 打卡页面 (模拟前端逻辑) -->
+            <div class="page page-clock">
+                <div class="header-section" style="padding-bottom: 10px;">
+                    <div class="user-profile">
+                        <div class="avatar"><i class="fa-solid fa-user-tie"></i></div>
+                        <div>
+                            <h2 style="font-size: 20px; margin-bottom: 2px;" id="profile-name">Name</h2>
+                            <p style="font-size: 13px;" id="profile-role">Role</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card" style="box-shadow: none; border: none; background: transparent;">
+                    <div class="time-cards">
+                        <div class="time-box">
+                            <h4>Clock In</h4><p>09:00</p>
+                            <div class="status" id="clock-in-status"><i class="fa-solid fa-circle-check"></i> 08:52 Done</div>
+                        </div>
+                        <div class="time-box">
+                            <h4>Clock Out</h4><p>17:00 (Flex)</p>
+                            <div class="status" style="color: var(--text-gray);" id="clock-out-status"><i class="fa-regular fa-clock"></i> Pending</div>
+                        </div>
+                    </div>
+                    <button class="big-clock-btn" onclick="simulateClockOut()">
+                        <h2>Clock Out</h2><p id="live-time">16:25:48</p>
+                    </button>
+                    <div class="location-check">
+                        <i class="fa-solid fa-location-dot" style="color: var(--success-green);"></i> In Zone: Sunrise Community
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 2: 接单页面 (动态数据) -->
+            <div class="page page-tasks">
+                <div class="header-section">
+                    <h2>Task Dispatch</h2><p>New alerts from sensor network</p>
+                </div>
+                <div id="tasks-container">
+                    <!-- JS动态插入待接单卡片 -->
+                    <p style="text-align: center; color: var(--text-gray); margin-top: 20px;">Loading tasks...</p>
+                </div>
+            </div>
+
+            <!-- Page 3: 汇报任务 (动态数据 + 摄像头支持) -->
+            <div class="page page-report">
+                <div class="header-section">
+                    <h2>Task Report</h2><p>Submit completion or issues</p>
+                </div>
+                <div class="card">
+                    <div class="form-group">
+                        <label>Select Active Task</label>
+                        <select id="active-task-select">
+                            <option value="">-- No Active Tasks --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Task Status</label>
+                        <select id="report-result">
+                            <option value="cleaned">Successfully Emptied</option>
+                            <option value="damaged">Bin Damaged / Needs Repair</option>
+                            <option value="unable">Sensor Blocked / Unable to clean</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Visual Proof (Optional)</label>
+                        
+                        <!-- 隐藏的真实文件输入框，支持调用摄像头 capture="environment" -->
+                        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;" onchange="handlePhotoUpload(event)">
+                        
+                        <!-- 默认显示的点击区域 -->
+                        <div class="upload-area" id="upload-area" onclick="document.getElementById('camera-input').click()">
+                            <i class="fa-solid fa-camera" style="font-size: 24px; margin-bottom: 8px; color: var(--primary-blue);"></i>
+                            <span>Tap to take photo</span>
+                        </div>
+
+                        <!-- 拍照后显示的预览区域 -->
+                        <div id="photo-preview-container">
+                            <img id="photo-preview" src="" alt="Proof Photo">
+                            <div class="remove-photo-btn" onclick="removePhoto()">
+                                <i class="fa-solid fa-xmark"></i>
+                            </div>
+                        </div>
+
+                    </div>
+                    <button class="btn-primary" style="background: var(--success-green);" onclick="submitReport()">
+                        <i class="fa-solid fa-paper-plane"></i> Submit Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Page 4: 查看评分 (动态数据) -->
+            <div class="page page-score">
+                <div class="header-section">
+                    <h2>My Performance</h2><p>Weekly summary & ratings</p>
+                </div>
+                <div class="card" style="text-align: center; border: none; box-shadow: none;">
+                    <div class="score-circle">
+                        <h1 id="kpi-avg">0.0</h1>
+                        <div style="color: var(--primary-blue); font-size: 14px;" id="kpi-stars">
+                            <!-- JS Stars -->
+                        </div>
+                    </div>
+                    <h3 style="color: var(--text-dark);">Work Overview</h3>
+                    <p style="color: var(--text-gray); font-size: 14px; margin-top: 5px;">Based on completed tasks.</p>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <h3 id="kpi-done">0</h3><p>Bins Emptied</p>
+                        </div>
+                        <div class="stat-box">
+                            <h3 style="color: var(--warn-orange);" id="kpi-pending">0</h3><p>Tasks Pending</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 5: 领导评分页面 (动态数据) -->
+            <div class="page page-admin">
+                <div class="header-section" style="background: var(--text-dark); color: white;">
+                    <h2 style="color: white;">Admin Scoring</h2><p style="color: #94A3B8;">Review completed tasks</p>
+                </div>
+                
+                <div id="admin-tasks-container">
+                    <!-- JS动态插入评分卡片 -->
+                    <p style="text-align: center; color: var(--text-gray); margin-top: 20px;">Loading completed tasks...</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 底部导航结构 -->
+        <div class="bottom-nav">
+            <label for="tab-clock" class="nav-label label-clock"><i class="fa-regular fa-clock"></i><span>Time</span></label>
+            <label for="tab-tasks" class="nav-label label-tasks"><i class="fa-solid fa-list-check"></i><span>Tasks</span></label>
+            <label for="tab-report" class="nav-label label-report"><i class="fa-solid fa-camera"></i><span>Report</span></label>
+            <label for="tab-score" class="nav-label label-score"><i class="fa-solid fa-chart-simple"></i><span>My KPI</span></label>
+            <label for="tab-admin" class="nav-label label-admin" id="nav-admin-btn" style="display: none;"><i class="fa-solid fa-user-shield"></i><span>Admin Rate</span></label>
+        </div>
+    </div>
+
+    <!-- 核心前后端交互 JavaScript -->
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let authToken = null;
+        let currentUser = null;
+        
+        // 存储即将发送给后端的照片 URL 列表
+        let uploadedPhotoUrls = []; 
+
+        // 1. 登录系统 (联通 /api/auth/login)
+        async function appLogin() {
+            const user = document.getElementById('login-username').value;
+            const pass = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+
+                if (!response.ok) throw new Error('Invalid credentials');
+                
+                const data = await response.json();
+                authToken = data.access_token;
+                currentUser = data.user;
+                
+                // 登录成功，隐藏覆盖层，初始化App
+                document.getElementById('login-overlay').style.display = 'none';
+                showToast(`Welcome, ${currentUser.name}`);
+                initApp();
+
+            } catch (err) {
+                showToast(err.message);
+            }
+        }
+
+        // 2. 初始化 App UI 状态
+        function initApp() {
+            document.getElementById('profile-name').innerText = currentUser.name;
+            document.getElementById('profile-role').innerText = currentUser.role.toUpperCase();
+            
+            if (currentUser.role === 'admin') {
+                document.getElementById('nav-admin-btn').style.display = 'flex';
+            }
+
+            setInterval(() => {
+                document.getElementById('live-time').innerText = new Date().toLocaleTimeString();
+            }, 1000);
+
+            document.querySelectorAll('input[name="tabs"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const tabId = e.target.id;
+                    if (tabId === 'tab-tasks') loadPendingTasks();
+                    else if (tabId === 'tab-report') loadInProgressTasks();
+                    else if (tabId === 'tab-score') loadUserKPI();
+                    else if (tabId === 'tab-admin') loadAdminTasks();
+                });
+            });
+        }
+
+        async function apiFetch(endpoint, options = {}) {
+            const headers = { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' };
+            const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            return response.status !== 204 ? await response.json() : null;
+        }
+
+        // 3. 拉取待接单任务
+        async function loadPendingTasks() {
+            try {
+                const tasks = await apiFetch('/tasks?status=pending');
+                const container = document.getElementById('tasks-container');
+                container.innerHTML = '';
+                
+                if (tasks.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; color:gray;">No new tasks!</p>';
+                    return;
+                }
+
+                tasks.forEach(task => {
+                    const fill = task.bin ? task.bin.current_fill : 0;
+                    const isUrgent = fill >= 90;
+                    const colorCls = isUrgent ? 'red' : 'warning-orange';
+                    const bgCls = isUrgent ? 'danger-red' : 'warning-orange';
+                    
+                    container.innerHTML += `
+                    <div class="card" style="opacity: ${isUrgent ? '1' : '0.8'};">
+                        <div class="bin-info">
+                            <div class="bin-icon" style="${!isUrgent ? 'background:#FEF3C7; color:var(--warning-orange);' : ''}">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </div>
+                            <div>
+                                <h4 style="color: var(--text-dark);">Block ${task.bin ? task.bin.block_id : '?'} - Floor ${task.bin ? task.bin.floor : '?'}</h4>
+                                <p style="font-size: 12px; color: var(--text-gray);">Task: ${task.id}</p>
+                            </div>
+                            <span style="margin-left: auto; font-size: 12px; font-weight: bold; color: var(--${bgCls});">${isUrgent ? 'URGENT' : 'WARNING'}</span>
+                        </div>
+                        <div class="bar-bg"><div class="bar-fill" style="width: ${fill}%; background: var(--${bgCls});"></div></div>
+                        <button class="btn-primary" ${!isUrgent ? 'style="background: #F1F5F9; color: var(--text-dark);"' : ''} onclick="acceptTask(${task.id})">
+                            <i class="fa-solid fa-hand-pointer"></i> Accept Task
+                        </button>
+                    </div>`;
+                });
+            } catch (e) { showToast('Failed to load tasks'); }
+        }
+
+        // 4. 接单操作
+        async function acceptTask(taskId) {
+            try {
+                await apiFetch(`/tasks/${taskId}/accept`, { method: 'POST' });
+                showToast(`Task ${taskId} Accepted!`);
+                loadPendingTasks();
+            } catch (e) { showToast('Failed to accept task (Requires Cleaner role)'); }
+        }
+
+        // 5. 汇报页面：拉取进行中的任务
+        async function loadInProgressTasks() {
+            try {
+                const tasks = await apiFetch(`/tasks?status=in_progress&cleaner_id=${currentUser.id}`);
+                const select = document.getElementById('active-task-select');
+                select.innerHTML = '';
+                
+                if (tasks.length === 0) {
+                    select.innerHTML = '<option value="">-- No Active Tasks --</option>';
+                    return;
+                }
+
+                tasks.forEach(task => {
+                    select.innerHTML += `<option value="${task.id}">Task ${task.id} - Block ${task.bin?.block_id}</option>`;
+                });
+            } catch (e) { showToast('Load in-progress tasks failed'); }
+        }
+
+        // === 新增：处理摄像头拍照与本地预览 ===
+        function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showToast('Uploading to Tencent Cloud COS...');
+            
+            // 使用 FileReader 在本地预览图片
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('upload-area').style.display = 'none';
+                document.getElementById('photo-preview-container').style.display = 'block';
+                document.getElementById('photo-preview').src = e.target.result;
+                
+                // 模拟腾讯云 COS 返回的真实图片链接 (在真实项目中，这里应调用 COS SDK)
+                const mockCosUrl = `https://swoms-bucket.cos.ap-guangzhou.myqcloud.com/proof_${Date.now()}.jpg`;
+                uploadedPhotoUrls = [mockCosUrl]; 
+                
+                showToast('Upload Complete!');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // === 新增：移除已上传的图片 ===
+        function removePhoto() {
+            uploadedPhotoUrls = [];
+            document.getElementById('camera-input').value = '';
+            document.getElementById('upload-area').style.display = 'flex';
+            document.getElementById('photo-preview-container').style.display = 'none';
+        }
+
+        // 6. 提交工单完成 (POST /api/tasks/{id}/report)
+        async function submitReport() {
+            const taskId = document.getElementById('active-task-select').value;
+            const result = document.getElementById('report-result').value;
+            if (!taskId) { showToast('No task selected'); return; }
+
+            try {
+                // 将腾讯云 COS 链接传给组员的 Python 接口
+                await apiFetch(`/tasks/${taskId}/report`, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        result: result, 
+                        photos: uploadedPhotoUrls 
+                    })
+                });
+                showToast(`Task ${taskId} reported!`);
+                loadInProgressTasks(); // 刷新下拉框
+                removePhoto(); // 成功后清理图片预览状态
+            } catch (e) { showToast('Submit failed'); }
+        }
+
+        // 7. 拉取个人绩效
+        async function loadUserKPI() {
+            try {
+                const kpi = await apiFetch(`/users/${currentUser.id}/performance`);
+                document.getElementById('kpi-avg').innerText = kpi.average_rating ? kpi.average_rating.toFixed(1) : '0.0';
+                document.getElementById('kpi-done').innerText = kpi.completed_tasks;
+                document.getElementById('kpi-pending').innerText = kpi.pending_tasks;
+                
+                let starsHtml = '';
+                let rating = Math.round(kpi.average_rating || 0);
+                for(let i=1; i<=5; i++) {
+                    starsHtml += `<i class="fa-solid fa-star" style="${i <= rating ? '' : 'color: #CBD5E1;'}"></i>`;
+                }
+                document.getElementById('kpi-stars').innerHTML = starsHtml;
+            } catch (e) { showToast('Load KPI failed'); }
+        }
+
+        // 8. 领导拉取待评分任务
+        async function loadAdminTasks() {
+            try {
+                const completed = await apiFetch('/tasks?status=completed');
+                const rated = await apiFetch('/tasks?status=rated');
+                const allTasks = [...completed, ...rated];
+                const container = document.getElementById('admin-tasks-container');
+                container.innerHTML = '';
+
+                if (allTasks.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; color:gray;">No tasks to rate</p>';
+                    return;
+                }
+
+                allTasks.forEach(task => {
+                    const isRated = task.status === 'rated';
+                    const cleanerName = task.cleaner ? task.cleaner.name : 'Unknown';
+                    // 如果组员数据库里有真实的图，渲染出来；没有则显示占位
+                    const photoHtml = (task.photos && task.photos.length > 0) 
+                        ? `<div class="photo-thumb" style="background-image: url('${task.photos[0]}');" onclick="window.open('${task.photos[0]}')"></div>`
+                        : `<div class="photo-thumb" style="background: #E2E8F0; color: #94A3B8;">No Photo</div>`;
+                    
+                    if (!isRated) {
+                        container.innerHTML += `
+                        <div class="card">
+                            <div class="task-list-header">
+                                <span><i class="fa-solid fa-user"></i> ${cleanerName}</span>
+                                <span style="color: var(--text-gray); font-weight: normal;">Task ${task.id}</span>
+                            </div>
+                            <h4 style="margin: 10px 0; color: var(--text-dark);">Block ${task.bin?.block_id} - Floor ${task.bin?.floor}</h4>
+                            <div class="photo-proofs">${photoHtml}</div>
+                            <div class="form-group" style="margin-top: 10px;">
+                                <input type="number" id="rate-star-${task.id}" placeholder="Rating (1-5)" min="1" max="5">
+                                <input type="text" id="rate-cmt-${task.id}" placeholder="Add a comment..." style="margin-top:5px;">
+                            </div>
+                            <button class="btn-primary" onclick="submitAdminRating(${task.id})">Submit Rating</button>
+                        </div>`;
+                    } else {
+                        container.innerHTML += `
+                        <div class="card" style="border: 1px solid var(--success-green); background: #F8FAFC;">
+                            <div class="task-list-header">
+                                <span><i class="fa-solid fa-user"></i> ${cleanerName}</span>
+                                <span style="color: var(--text-gray); font-weight: normal;">Task ${task.id}</span>
+                            </div>
+                            <h4 style="margin: 5px 0 10px; color: var(--text-dark);">Block ${task.bin?.block_id} - Floor ${task.bin?.floor}</h4>
+                            <div class="photo-proofs">${photoHtml}</div>
+                            <div class="undo-banner">
+                                <div>
+                                    <div style="font-weight: bold; margin-bottom: 2px;"><i class="fa-solid fa-check-circle"></i> Rated ${task.rating} Stars</div>
+                                    <div style="font-size: 12px; color: var(--text-gray);">Comment: ${task.comment || 'None'}</div>
+                                </div>
+                                <div class="undo-btn" onclick="showToast('Undo mock triggered!')"><i class="fa-solid fa-rotate-left"></i> Undo</div>
+                            </div>
+                        </div>`;
+                    }
+                });
+            } catch (e) { showToast('Load admin tasks failed'); }
+        }
+
+        // 9. 领导提交评分
+        async function submitAdminRating(taskId) {
+            const rating = parseInt(document.getElementById(`rate-star-${taskId}`).value);
+            const comment = document.getElementById(`rate-cmt-${taskId}`).value;
+            
+            if (!rating || rating < 1 || rating > 5) { showToast('Enter valid rating (1-5)'); return; }
+
+            try {
+                await apiFetch(`/tasks/${taskId}/rate`, {
+                    method: 'POST',
+                    body: JSON.stringify({ rating: rating, comment: comment })
+                });
+                showToast(`Task ${taskId} rated successfully!`);
+                loadAdminTasks();
+            } catch (e) { showToast('Submit rating failed'); }
+        }
+
+        function simulateClockOut() {
+            document.getElementById('clock-out-status').innerHTML = `<i class="fa-solid fa-circle-check"></i> ${new Date().toLocaleTimeString()} Done`;
+            document.getElementById('clock-out-status').style.color = 'var(--success-green)';
+            showToast('Clock Out Successful (Local Mock)');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2500);
+        }
+    </script>
+</body>
+</html>
