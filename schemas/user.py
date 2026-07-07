@@ -1,7 +1,7 @@
 """Pydantic schemas for User."""
 
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Literal, Dict
 from pydantic import BaseModel, Field, ConfigDict
 
 
