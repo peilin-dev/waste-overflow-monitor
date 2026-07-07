@@ -23,6 +23,9 @@ from routers import cleaners as cleaners_router
 from routers import tasks as tasks_router
 from routers import roles as roles_router
 from routers import attendance as attendance_router
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from routers import upload as upload_router
 app = FastAPI(
     docs_url="/docs",
     redoc_url=None,
@@ -56,6 +59,11 @@ app.include_router(cleaners_router.router)
 app.include_router(tasks_router.router)
 app.include_router(roles_router.router)
 app.include_router(attendance_router.router)
+app.include_router(upload_router.router)
+
+# Serve uploaded photos
+Path("/app/uploads").mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
 @app.get("/", tags=["health"])
 async def root():
     return {
