@@ -12,7 +12,7 @@ from core.config import settings
 from core.database import Base, async_engine
 
 # Import models so SQLAlchemy registers them
-from models import block, bin, user, cleaner_block, task, role      # noqa: F401
+from models import block, bin, user, cleaner_block, task, role, attendance      # noqa: F401
 
 # Import routers
 from routers import blocks as blocks_router
