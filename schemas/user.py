@@ -1,7 +1,7 @@
 """Pydantic schemas for User."""
 
 from datetime import datetime
-from typing import Optional, Literal, Dict
+from typing import Optional, Dict
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -9,7 +9,7 @@ class UserBase(BaseModel):
     """Shared user fields (without password)."""
     name: str = Field(..., min_length=1, max_length=50, examples=["Alice"])
     username: str = Field(..., min_length=3, max_length=50, examples=["alice01"])
-    role: Literal["admin", "cleaner"] = Field(..., examples=["cleaner"])
+    role: str = Field(..., min_length=1, max_length=50, examples=["cleaner"])
     phone: Optional[str] = Field(None, max_length=20)
     zone: Optional[str] = Field(None, max_length=50)
     shift: Optional[str] = Field(None, max_length=50)
@@ -23,7 +23,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     """Update payload — all fields optional. Password not changed here (separate endpoint)."""
     name: Optional[str] = Field(None, min_length=1, max_length=50)
-    role: Optional[Literal["admin", "cleaner"]] = None
+    role: Optional[str] = Field(None, min_length=1, max_length=50)
     phone: Optional[str] = Field(None, max_length=20)
     zone: Optional[str] = Field(None, max_length=50)
     shift: Optional[str] = Field(None, max_length=50)
