@@ -15,6 +15,8 @@ from models.user import User
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
+SLA_SECONDS = 7200  # 2 hours
+
 
 async def _active_admin_count(db: AsyncSession, exclude_id: int) -> int:
     return await db.scalar(
@@ -173,6 +175,24 @@ async def user_performance(
     for rating, count in dist_result.all():
         distribution[str(rating)] = count
 
+    sla_rows = await db.execute(
+        select(Task.accepted_at, Task.completed_at).where(
+            Task.cleaner_id == user_id,
+            Task.status.in_(["completed", "rated"]),
+            Task.accepted_at.isnot(None),
+            Task.completed_at.isnot(None),
+        )
+    )
+    sla_data = sla_rows.all()
+    if sla_data:
+        on_time = sum(
+            1 for a, c in sla_data
+            if (c - a).total_seconds() <= SLA_SECONDS
+        )
+        on_time_rate = round(on_time / len(sla_data) * 100, 1)
+    else:
+        on_time_rate = None
+
     return {
         "user_id": user.id,
         "name": user.name,
@@ -181,4 +201,5 @@ async def user_performance(
         "pending_tasks": pending or 0,
         "average_rating": float(avg_rating) if avg_rating else None,
         "rating_distribution": distribution,
+        "on_time_rate": on_time_rate,
     }

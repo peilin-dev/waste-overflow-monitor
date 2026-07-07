@@ -50,6 +50,7 @@ class UserPerformance(BaseModel):
     pending_tasks: int
     average_rating: Optional[float]
     rating_distribution: Dict[str, int]
+    on_time_rate: Optional[float]
 
 
 class UserOut(UserBase):
