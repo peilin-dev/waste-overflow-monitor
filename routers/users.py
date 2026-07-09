@@ -6,7 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.deps import get_current_user, get_current_admin
+from core.deps import get_current_user, get_current_admin, get_current_admin_or_leader
 from core.security import verify_password
 from schemas.user import UserCreate, UserUpdate, UserOut, UserPasswordReset, PasswordChangeRequest, UserPerformance
 from crud import users as crud_users
@@ -35,13 +35,13 @@ async def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(get_current_admin_or_leader),
 ):
     return await crud_users.get_all(db, role=role, status=status, skip=skip, limit=limit)
 
 
 @router.get("/{user_id}", response_model=UserOut, summary="Get one user")
-async def get_user(user_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin)):
+async def get_user(user_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin_or_leader)):
     user = await crud_users.get_by_id(db, user_id)
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
