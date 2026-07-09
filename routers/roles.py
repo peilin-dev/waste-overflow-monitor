@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.deps import get_current_admin
+from core.deps import get_current_admin, get_current_admin_or_leader
 from models.user import User
 from schemas.role import RoleCreate, RoleUpdate, RoleOut
 from crud import roles as crud_roles
@@ -29,14 +29,14 @@ def _to_out(role: Role, user_counts: dict) -> dict:
 
 
 @router.get("", response_model=List[RoleOut], summary="List all roles (with user counts)")
-async def list_roles(db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin)):
+async def list_roles(db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin_or_leader)):
     roles = await crud_roles.get_all(db)
     counts = await crud_roles.count_users_per_role(db)
     return [_to_out(r, counts) for r in roles]
 
 
 @router.get("/{role_id}", response_model=RoleOut, summary="Get one role")
-async def get_role(role_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin)):
+async def get_role(role_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_admin_or_leader)):
     role = await crud_roles.get_by_id(db, role_id)
     if not role:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Role not found")
