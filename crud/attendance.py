@@ -15,6 +15,14 @@ def _now() -> datetime:
     return datetime.now(_MYT).replace(tzinfo=None)
 
 
+async def get_all_today(db: AsyncSession) -> list[Attendance]:
+    today = _now().date()
+    result = await db.execute(
+        select(Attendance).where(Attendance.date == today)
+    )
+    return list(result.scalars().all())
+
+
 async def get_today(db: AsyncSession, user_id: int) -> Optional[Attendance]:
     result = await db.execute(
         select(Attendance).where(

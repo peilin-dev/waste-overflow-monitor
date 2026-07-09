@@ -1,16 +1,24 @@
 """Attendance HTTP endpoints — clock-in / clock-out."""
 
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.deps import get_current_user
+from core.deps import get_current_user, get_current_admin_or_leader
 from models.user import User
 from schemas.attendance import AttendanceOut
 from crud import attendance as crud_attendance
 
 router = APIRouter(prefix="/api/attendance", tags=["attendance"])
+
+
+@router.get("/all-today", response_model=List[AttendanceOut])
+async def get_all_today(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin_or_leader),
+):
+    return await crud_attendance.get_all_today(db)
 
 
 @router.get("/today", response_model=Optional[AttendanceOut])
