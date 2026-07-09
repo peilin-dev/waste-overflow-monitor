@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.deps import get_current_user, get_current_admin
+from core.deps import get_current_user, get_current_admin, get_current_admin_or_leader
 from models.user import User
 from schemas.block import BlockOut
 from schemas.user import UserOut
@@ -45,7 +45,7 @@ async def assign_blocks_to_cleaner(
     cleaner_id: int,
     payload: CleanerBlockAssign,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(get_current_admin_or_leader),
 ):
     # Validate cleaner exists and is a cleaner
     cleaner = await crud_users.get_by_id(db, cleaner_id)
@@ -76,7 +76,7 @@ async def unassign_block_from_cleaner(
     cleaner_id: int,
     block_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(get_current_admin_or_leader),
 ):
     if not await crud_cleaners.unassign_block(db, cleaner_id, block_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Assignment not found")
