@@ -1,6 +1,5 @@
 """Authentication endpoints — login and current user."""
 
-from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +16,7 @@ from crud import users as crud_users
 from models.user import User
 from schemas.auth import LoginRequest, TokenResponse, ChangePasswordRequest
 from schemas.user import UserOut
+from utils.time import now_myt
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -50,7 +50,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         )
 
     # 4. Update last_seen timestamp
-    user.last_seen = datetime.now()
+    user.last_seen = now_myt()
     await db.commit()
 
     # 5. Generate JWT token
@@ -91,7 +91,7 @@ async def oauth2_token(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is inactive",
         )
-    user.last_seen = datetime.now()
+    user.last_seen = now_myt()
     await db.commit()
     token = create_access_token(
         data={"sub": str(user.id), "role": user.role, "username": user.username}

@@ -1,6 +1,5 @@
 """CRUD for Task with state transitions."""
 
-from datetime import datetime
 from typing import Optional, Sequence
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
@@ -8,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.task import Task
 from schemas.task import TaskCreate, TaskReport, TaskRate
+from utils.time import now_myt
 
 
 def _with_relations(stmt):
@@ -73,7 +73,7 @@ async def accept(db: AsyncSession, task: Task, cleaner_id: int) -> Task:
     """State transition: pending → in_progress."""
     task.cleaner_id = cleaner_id
     task.status = "in_progress"
-    task.accepted_at = datetime.now()
+    task.accepted_at = now_myt()
     await db.commit()
     await db.refresh(task, attribute_names=["bin", "cleaner"])
     return task
@@ -82,7 +82,7 @@ async def accept(db: AsyncSession, task: Task, cleaner_id: int) -> Task:
 async def report(db: AsyncSession, task: Task, payload: TaskReport) -> Task:
     """State transition: in_progress → completed."""
     task.status = "completed"
-    task.completed_at = datetime.now()
+    task.completed_at = now_myt()
     task.result = payload.result
     task.photos = payload.photos
     await db.commit()
@@ -97,7 +97,7 @@ async def rate(db: AsyncSession, task: Task, payload: TaskRate, admin_id: int) -
     task.rating = payload.rating
     task.comment = payload.comment
     task.rated_by = admin_id
-    task.rated_at = datetime.now()
+    task.rated_at = now_myt()
     await db.commit()
     await db.refresh(task, attribute_names=["bin", "cleaner"])
     return task

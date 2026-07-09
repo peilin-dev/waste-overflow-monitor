@@ -1,12 +1,12 @@
 """CRUD operations for Bin — Repository layer."""
 
-from datetime import datetime
 from typing import Optional, Sequence
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.bin import Bin
 from schemas.bin import BinCreate, BinUpdate
+from utils.time import now_myt
 
 
 async def get_all(
@@ -76,7 +76,7 @@ async def update(db: AsyncSession, bin_: Bin, payload: BinUpdate) -> Bin:
 async def update_fill(db: AsyncSession, bin_: Bin, fill: int) -> Bin:
     """Update fill level from sensor report."""
     bin_.current_fill = fill
-    bin_.updated_at = datetime.now()
+    bin_.updated_at = now_myt()
     await db.commit()
     await db.refresh(bin_)
     return bin_

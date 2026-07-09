@@ -1,18 +1,11 @@
 """CRUD for Attendance — clock-in/out logic."""
 
-from datetime import date, datetime, timezone, timedelta
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.attendance import Attendance
-
-_MYT = timezone(timedelta(hours=8))
-
-
-def _now() -> datetime:
-    """Current time in Malaysia Time (UTC+8), stored as naive datetime."""
-    return datetime.now(_MYT).replace(tzinfo=None)
+from utils.time import now_myt as _now
 
 
 async def get_all_today(db: AsyncSession) -> list[Attendance]:
