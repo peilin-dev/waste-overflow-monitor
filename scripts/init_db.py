@@ -35,11 +35,16 @@ async def main():
             password_hash=hash_password('admin123'),
             role='admin', status='active',
         )
+        leader = User(
+            name='Team Leader', username='leader',
+            password_hash=hash_password('leader123'),
+            role='leader', status='active',
+        )
         c1 = User(name='Li Wei',     username='liwei',     password_hash=hash_password('cleaner123'), role='cleaner', zone='Zone A', shift='morning', status='active')
         c2 = User(name='Zhang Ming', username='zhangming', password_hash=hash_password('cleaner123'), role='cleaner', zone='Zone B', shift='evening', status='active')
         c3 = User(name='Wang Fang',  username='wangfang',  password_hash=hash_password('cleaner123'), role='cleaner', zone='Zone C', shift='morning', status='active')
         c4 = User(name='Chen Hao',   username='chenhao',   password_hash=hash_password('cleaner123'), role='cleaner', zone='Zone A', shift='night',   status='inactive')
-        db.add_all([admin, c1, c2, c3, c4])
+        db.add_all([admin, leader, c1, c2, c3, c4])
         await db.flush()
 
         # ── Blocks ────────────────────────────────────────────
@@ -134,6 +139,7 @@ async def main():
 
     print('Database initialized successfully!')
     print('  Admin:    admin / admin123')
+    print('  Leader:   leader / leader123')
     print('  Cleaners: liwei / zhangming / wangfang (password: cleaner123)')
 
 

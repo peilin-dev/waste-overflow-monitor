@@ -77,3 +77,15 @@ async def get_current_admin(
             detail="Admin access required",
         )
     return current_user
+
+
+async def get_current_admin_or_leader(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Ensure the current user has admin or leader role."""
+    if current_user.role not in ("admin", "leader"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin or Leader access required",
+        )
+    return current_user

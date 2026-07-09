@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.deps import get_current_user, get_current_admin
+from core.deps import get_current_user, get_current_admin, get_current_admin_or_leader
 from datetime import datetime
 from schemas.task import TaskCreate, TaskReport, TaskRate, TaskAssign, TaskOut, TaskStats
 from crud import tasks as crud_tasks
@@ -95,7 +95,7 @@ async def assign_task(
     task_id: int,
     payload: TaskAssign,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(get_current_admin_or_leader),
 ):
     task = await crud_tasks.get_by_id(db, task_id)
     if not task:
@@ -208,7 +208,7 @@ async def rate_task(
     task_id: int,
     payload: TaskRate,
     db: AsyncSession = Depends(get_db),
-    current_admin: User = Depends(get_current_admin),
+    current_admin: User = Depends(get_current_admin_or_leader),
 ):
     task = await crud_tasks.get_by_id(db, task_id)
     if not task:
